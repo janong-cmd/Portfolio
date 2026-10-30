@@ -5,7 +5,7 @@
    See Code.gs for the setup steps. While it is empty, the gallery section
    simply shows the button that opens the Drive folder. */
 var GALLERY_CONFIG = {
-  APPS_SCRIPT_URL: '',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwgi-Q9BPL8th2M4BTjzpTSyhenoMyTbNgON8FPCJabLb4EregqdlBy8zgOaW3PGEnS/exec',
   PAGE_SIZE: 9
 };
 (function () {
@@ -174,7 +174,6 @@ var GALLERY_CONFIG = {
     var stage = document.getElementById('lbStage');
     var capEl = document.getElementById('lbCaption');
     var cntEl = document.getElementById('lbCount');
-    var openEl = document.getElementById('lbOpen');
     var btnClose = document.getElementById('lbClose');
     var btnPrev = document.getElementById('lbPrev');
     var btnNext = document.getElementById('lbNext');
@@ -185,8 +184,20 @@ var GALLERY_CONFIG = {
     var current = 0;
     var lastFocus = null;
 
+    /* Images are shown directly on the page. Two Google image endpoints are tried in turn. */
     function thumb(id, w) {
+      return 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w' + w;
+    }
+    function thumbFallback(id, w) {
       return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + w;
+    }
+    function loadImage(img, id, w, onFail) {
+      var triedFallback = false;
+      img.addEventListener('error', function () {
+        if (!triedFallback) { triedFallback = true; img.src = thumbFallback(id, w); }
+        else onFail();
+      });
+      img.src = thumb(id, w);
     }
     function filtered() {
       return items.filter(function (it) { return filter === 'all' || it.type === filter; });
@@ -222,11 +233,10 @@ var GALLERY_CONFIG = {
         img.loading = 'lazy';
         img.decoding = 'async';
         img.addEventListener('load', function () { img.classList.add('loaded'); });
-        img.addEventListener('error', function () {
+        loadImage(img, it.id, 640, function () {
           b.classList.add('broken');
           b.textContent = it.type === 'video' ? '▶ Video' : 'Preview unavailable';
         });
-        img.src = thumb(it.id, 640);
         b.appendChild(img);
 
         if (it.type === 'video') {
@@ -286,14 +296,12 @@ var GALLERY_CONFIG = {
         var im = document.createElement('img');
         im.alt = it.name;
         im.addEventListener('load', function () { if (spin.parentNode) spin.remove(); });
-        im.addEventListener('error', function () { spin.remove(); stage.textContent = 'This image could not be loaded.'; });
-        im.src = thumb(it.id, 2000);
+        loadImage(im, it.id, 2000, function () { spin.remove(); stage.textContent = 'This image could not be loaded.'; });
         stage.appendChild(im);
       }
 
       capEl.textContent = it.name;
       cntEl.textContent = (current + 1) + ' / ' + list.length;
-      openEl.href = 'https://drive.google.com/file/d/' + encodeURIComponent(it.id) + '/view';
       var many = list.length > 1;
       btnPrev.hidden = btnNext.hidden = !many;
     }
@@ -325,7 +333,7 @@ var GALLERY_CONFIG = {
       else if (e.key === 'ArrowLeft') showItem(current - 1);
       else if (e.key === 'ArrowRight') showItem(current + 1);
       else if (e.key === 'Tab') {                       // keep focus inside the dialog
-        var f = [btnClose, btnPrev, btnNext, openEl].filter(function (el) { return !el.hidden; });
+        var f = [btnClose, btnPrev, btnNext].filter(function (el) { return !el.hidden; });
         var first = f[0], last = f[f.length - 1];
         if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -347,14 +355,36 @@ var GALLERY_CONFIG = {
       grid.setAttribute('aria-busy', 'false');
       grid.innerHTML = '';
       document.querySelector('.gallery-bar').hidden = true;
-      setStatus('Browse my images and videos in the shared Google Drive folder.');
+      setStatus('The gallery is not connected yet.');
       if (window.console) console.info('Gallery: set GALLERY_CONFIG.APPS_SCRIPT_URL in script.js to load items here.');
       return;
     }
 
+    /* JSONP: a <script> tag is not subject to CORS, so this also works when the
+       page is opened from a file or any other domain. Code.gs answers with
+       callbackName({...}) when it receives ?callback=callbackName. */
+    function loadJsonp(src) {
+      return new Promise(function (resolve, reject) {
+        var name = '__galleryCb' + Date.now();
+        var tag = document.createElement('script');
+        var timer = setTimeout(function () { cleanup(); reject(new Error('Timed out waiting for Apps Script')); }, 20000);
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[name];
+          if (tag.parentNode) tag.parentNode.removeChild(tag);
+        }
+        window[name] = function (data) { cleanup(); resolve(data); };
+        tag.onerror = function () {
+          cleanup();
+          reject(new Error('Could not load the Apps Script URL. Check the deployment is set to "Who has access: Anyone" and that Code.gs is the latest version.'));
+        };
+        tag.src = src + (src.indexOf('?') === -1 ? '?' : '&') + 'callback=' + name;
+        document.head.appendChild(tag);
+      });
+    }
+
     showSkeletons();
-    fetch(url)
-        .then(function (r) { return r.json(); })
+    loadJsonp(url)
         .then(function (data) {
           if (!data || !data.ok) throw new Error((data && data.error) || 'Bad response');
           items = data.items || [];
@@ -366,10 +396,11 @@ var GALLERY_CONFIG = {
           }
           render();
         })
-        .catch(function () {
+        .catch(function (err) {
+          if (window.console) console.error('Gallery load failed:', err);
           grid.innerHTML = '';
           grid.setAttribute('aria-busy', 'false');
-          setStatus('The gallery could not be loaded right now. You can still view everything on Google Drive.');
+          setStatus('The gallery could not be loaded right now. Please try again in a moment.');
         });
   });
 })();
