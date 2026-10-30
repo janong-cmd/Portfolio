@@ -33,6 +33,7 @@
       <a href="#experience">Experience</a>
       <a href="#skills">Skills</a>
       <a href="#projects">Projects</a>
+      <a href="#gallery">Gallery</a>
       <a href="#services">Services</a>
       <a href="#contact" class="nav-cta">Contact</a>
     </nav>
@@ -290,8 +291,33 @@
     </div>
   </section>
 
+  <!-- Gallery (loaded from Google Drive via Apps Script) -->
+  <section id="gallery" aria-labelledby="galleryTitle">
+    <div class="container">
+      <div class="sec-head" data-reveal><span class="idx"></span><h2 class="sec-title" id="galleryTitle">Gallery</h2></div>
+      <p class="sec-sub" data-reveal style="--i:1">A look at my AI-generated images, videos, and design work. Select any item to preview it.</p>
+
+      <div class="gallery-bar" data-reveal style="--i:2">
+        <div class="gallery-filters" role="group" aria-label="Filter gallery">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter="image" aria-pressed="false">Images</button>
+          <button class="chip" type="button" data-filter="video" aria-pressed="false">Videos</button>
+        </div>
+        <span class="gallery-count" id="galleryCount" aria-live="polite"></span>
+      </div>
+
+      <div class="gallery-grid" id="galleryGrid" aria-busy="true"></div>
+      <p class="gallery-status" id="galleryStatus" role="status" aria-live="polite"></p>
+
+      <div class="gallery-foot">
+        <button class="btn btn-ghost" type="button" id="galleryMore" hidden>Show more</button>
+        <a class="btn btn-ghost" id="galleryDrive" href="https://drive.google.com/drive/folders/14c121WNw9YIgL8mEep48VqOcRE9fO8Cr?usp=sharing" target="_blank" rel="noopener noreferrer">Open full folder on Google Drive ↗</a>
+      </div>
+    </div>
+  </section>
+
   <!-- Services -->
-  <section id="services">
+  <section id="services" class="alt">
     <div class="container">
       <div class="sec-head" data-reveal><span class="idx"></span><h2 class="sec-title">What I Can Help With</h2></div>
       <p class="sec-sub" data-reveal style="--i:1">A practical combination of technical support, operations, and digital creative skills.</p>
@@ -322,7 +348,7 @@
   </section>
 
   <!-- Education -->
-  <section id="education" class="alt">
+  <section id="education">
     <div class="container">
       <div class="sec-head" data-reveal><span class="idx"></span><h2 class="sec-title">Education &amp; Certifications</h2></div>
       <div class="ed-grid">
@@ -370,7 +396,7 @@
   </section>
 
   <!-- Contact -->
-  <section id="contact">
+  <section id="contact" class="alt">
     <div class="container contact-grid">
       <div>
         <h2 class="contact-head" data-reveal>Let's keep your<br>systems <span>running</span>.</h2>
@@ -414,6 +440,21 @@
     </nav>
   </div>
 </footer>
+
+<!-- Gallery lightbox -->
+<div class="lbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Gallery preview" hidden>
+  <button class="lb-btn lb-close" id="lbClose" type="button" aria-label="Close preview">✕</button>
+  <button class="lb-btn lb-nav lb-prev" id="lbPrev" type="button" aria-label="Previous item">‹</button>
+  <button class="lb-btn lb-nav lb-next" id="lbNext" type="button" aria-label="Next item">›</button>
+  <div class="lb-stage" id="lbStage"></div>
+  <div class="lb-bar">
+    <span class="lb-caption" id="lbCaption"></span>
+    <span class="lb-meta">
+        <span id="lbCount"></span>
+        <a id="lbOpen" href="#" target="_blank" rel="noopener noreferrer">Open in Drive ↗</a>
+      </span>
+  </div>
+</div>
 
 <button class="to-top" id="toTop" aria-label="Back to top">↑</button>
 </body>
